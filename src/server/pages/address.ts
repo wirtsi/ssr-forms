@@ -4,10 +4,10 @@ import { getRequest } from '../utilities/context';
 import Page from '../components/page';
 import Ajv, { ErrorObject } from 'ajv/dist/2019';
 import addFormats from 'ajv-formats';
-import validation from 'ajv/dist/vocabularies/validation';
 
 interface Body {
   user: string;
+  email: string;
 }
 
 const Address = () => {
@@ -18,17 +18,18 @@ const Address = () => {
     properties: {
       user: {
         type: 'string',
-        minLength: 2,
+        minLength: 3,
         maxLength: 10,
       },
       email: {
         type: 'string',
         format: 'email',
+        minLength: 3,
       },
     },
     required: ['user', 'email'],
   };
-  const ajv = new Ajv();
+  const ajv = new Ajv({ allErrors: true });
   addFormats(ajv);
   const validate = ajv.compile(schema);
   if (body) {
@@ -44,7 +45,7 @@ const Address = () => {
 
   const getErrorMessage = (field: string, errors: ErrorObject[] | null | undefined) => {
     if (!errors) {
-      return true;
+      return '';
     }
     const error = errors.find(el => el.dataPath.substr(1) == field);
     if (error) {
@@ -66,7 +67,9 @@ const Address = () => {
             class="input ${body && (validField('user', validate.errors) ? 'is-success' : 'is-danger')}"
             type="text"
             name="user"
-            placeholder="Text input"
+            placeholder="Username"
+            value="${body ? body.user : null}"
+            onblur="this.form.submit()"
           />
           <span class="icon is-small is-left">
             <i class="fas fa-user"></i>
@@ -76,19 +79,33 @@ const Address = () => {
             <i class="fas ${validField('user', validate.errors) ? 'fa-check' : 'fa-exclamation-triangle'}"></i>
           </span>`}
         </div>
+        ${body &&
+        !validField('user', validate.errors) &&
+        html`<p class="help is-danger">${getErrorMessage('user', validate.errors)}</p>`}
       </div>
 
       <div class="field">
         <label class="label">Email</label>
         <div class="control has-icons-left has-icons-right">
-          <input class="input" type="email" name="email" placeholder="Email input" value="hello@foo.com" />
+          <input
+            class="input ${body && (validField('email', validate.errors) ? 'is-success' : 'is-danger')}"
+            type="text"
+            name="email"
+            placeholder="Email"
+            value="${body ? body.email : null}"
+            onblur="this.form.submit()"
+          />
           <span class="icon is-small is-left">
-            <i class="fas fa-envelope"></i>
+            <i class="fas fa-mail"></i>
           </span>
-          <span class="icon is-small is-right">
-            <i class="fas fa-exclamation-triangle"></i>
-          </span>
+          ${body &&
+          html`<span class="icon is-small is-right">
+            <i class="fas ${validField('email', validate.errors) ? 'fa-check' : 'fa-exclamation-triangle'}"></i>
+          </span>`}
         </div>
+        ${body &&
+        !validField('email', validate.errors) &&
+        html`<p class="help is-danger">${getErrorMessage('email', validate.errors)}</p>`}
       </div>
 
       <div class="field">
