@@ -16,7 +16,7 @@ const Address = () => {
   const cart = {
     total: 3255,
     items: [
-      { sku: 3155, category: 4 },
+      { sku: 3155, category: 6 },
       { sku: 5515, category: 5 },
     ],
   };
@@ -37,10 +37,8 @@ const Address = () => {
       },
       phone: {
         type: 'string',
-        minLength: 3,
       },
     },
-    additionalProperties: false,
     required: ['user', 'email'],
   };
 
@@ -75,9 +73,20 @@ const Address = () => {
     },
     if: {
       properties: {
-        'http://www.aboutyou.cloud/bodySchema.json#items': {
-          anyOf: [],
+        cart: {
+          type: 'object',
+          properties: {
+            items: {
+              type: 'array',
+              contains: { properties: { category: { const: 3 } } },
+            },
+          },
         },
+      },
+    },
+    then: {
+      properties: {
+        body: { required: ['phone'] },
       },
     },
   };
@@ -108,7 +117,7 @@ const Address = () => {
     }
   };
 
-  console.log(body);
+  console.log({ body, cart });
   console.log(validate.errors);
   return Page(
     { title: 'Address' },
@@ -168,7 +177,7 @@ const Address = () => {
             type="text"
             name="phone"
             placeholder="Phone"
-            value="${body ? body.email : null}"
+            value="${body ? body.phone : null}"
             onblur="this.form.submit()"
           />
           <span class="icon is-small is-left">
@@ -180,7 +189,7 @@ const Address = () => {
           </span>`}
         </div>
         ${body &&
-        !validField('email', validate.errors) &&
+        !validField('phone', validate.errors) &&
         html`<p class="help is-danger">${getErrorMessage('email', validate.errors)}</p>`}
       </div>
 
