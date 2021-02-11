@@ -2,18 +2,27 @@ import { html } from '@nanoweb/template';
 import { addPage } from '../utilities/router';
 import { getRequest } from '../utilities/context';
 import Page from '../components/page';
-import Ajv, { ErrorObject } from 'ajv/dist/2019';
+import Ajv, { ErrorObject, JSONSchemaType } from 'ajv/dist/2019';
 import addFormats from 'ajv-formats';
 
 interface Body {
   user: string;
   email: string;
+  phone: string;
 }
 
 const Address = () => {
   const { body } = getRequest<any, any, Body>();
+  const cart = {
+    total: 3255,
+    items: [
+      { sku: 3155, category: 4 },
+      { sku: 5515, category: 5 },
+    ],
+  };
 
-  const schema = {
+  const bodySchema = {
+    $id: 'http://www.aboutyou.cloud/bodySchema.json',
     type: 'object',
     properties: {
       user: {
@@ -23,31 +32,75 @@ const Address = () => {
       },
       email: {
         type: 'string',
+        minLength: 3,
         format: 'email',
+      },
+      phone: {
+        type: 'string',
         minLength: 3,
       },
     },
+    additionalProperties: false,
     required: ['user', 'email'],
+  };
+
+  const cartSchema = {
+    $id: 'http://www.aboutyou.cloud/cartSchema.json',
+    type: 'object',
+    properties: {
+      total: { type: 'number' },
+      items: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            sku: {
+              type: 'number',
+            },
+            category: {
+              type: 'number',
+            },
+          },
+        },
+      },
+    },
+  };
+
+  const validateSchema = {
+    $id: 'http://www.aboutyou.cloud/validateSchema.json',
+    type: 'object',
+    properties: {
+      body: { $ref: 'http://www.aboutyou.cloud/bodySchema.json' },
+      cart: { $ref: 'http://www.aboutyou.cloud/cartSchema.json' },
+    },
+    if: {
+      properties: {
+        'http://www.aboutyou.cloud/bodySchema.json#items': {
+          anyOf: [],
+        },
+      },
+    },
   };
   const ajv = new Ajv({ allErrors: true });
   addFormats(ajv);
-  const validate = ajv.compile(schema);
+  const validate = ajv.addSchema([bodySchema, cartSchema]).compile(validateSchema);
+
   if (body) {
-    validate(body);
+    validate({ body, cart });
   }
 
   const validField = (field: string, errors: ErrorObject[] | null | undefined) => {
     if (!errors) {
       return true;
     }
-    return !errors.find(el => el.dataPath.substr(1) == field);
+    return !errors.find(el => el.dataPath.replace('/body/', '') == field);
   };
 
   const getErrorMessage = (field: string, errors: ErrorObject[] | null | undefined) => {
     if (!errors) {
       return '';
     }
-    const error = errors.find(el => el.dataPath.substr(1) == field);
+    const error = errors.find(el => el.dataPath.replace('/body/', '') == field);
     if (error) {
       return error.message;
     } else {
@@ -96,11 +149,34 @@ const Address = () => {
             onblur="this.form.submit()"
           />
           <span class="icon is-small is-left">
-            <i class="fas fa-mail"></i>
+            <i class="fas fa-envelope-square"></i>
           </span>
           ${body &&
           html`<span class="icon is-small is-right">
             <i class="fas ${validField('email', validate.errors) ? 'fa-check' : 'fa-exclamation-triangle'}"></i>
+          </span>`}
+        </div>
+        ${body &&
+        !validField('email', validate.errors) &&
+        html`<p class="help is-danger">${getErrorMessage('email', validate.errors)}</p>`}
+      </div>
+      <div class="field">
+        <label class="label">Phone</label>
+        <div class="control has-icons-left has-icons-right">
+          <input
+            class="input ${body && (validField('phone', validate.errors) ? 'is-success' : 'is-danger')}"
+            type="text"
+            name="phone"
+            placeholder="Phone"
+            value="${body ? body.email : null}"
+            onblur="this.form.submit()"
+          />
+          <span class="icon is-small is-left">
+            <i class="fas fa-phone"></i>
+          </span>
+          ${body &&
+          html`<span class="icon is-small is-right">
+            <i class="fas ${validField('phone', validate.errors) ? 'fa-check' : 'fa-exclamation-triangle'}"></i>
           </span>`}
         </div>
         ${body &&
